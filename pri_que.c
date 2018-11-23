@@ -1,7 +1,7 @@
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/init.h>
-
+#include <linux/string.h>
 #include <linux/kernel.h>	/* printk() */
 #include <linux/slab.h>		/* kmalloc() */
 #include <linux/fs.h>		/* everything... */
@@ -42,26 +42,78 @@ struct queue_dev{
 
 struct queue_dev *queue_devices;
 
+/*Function Prototype Start*/
 void queue_cleanup_module(void);
+int queue_trim(struct queue_dev *dev);
+/*Function Prototype End*/
+
+int queue_open(struct inode *inode, struct file *filp)
+{
+	struct queue_dev *dev;
+
+    dev = container_of(inode->i_cdev, struct queue_dev, cdev);
+    filp->private_data = dev;
+    
+    /* trim the device if open was write-only */
+    if ((filp->f_flags & O_ACCMODE) == O_WRONLY) {
+        if (down_interruptible(&dev->sem))
+            return -ERESTARTSYS;
+        
+        printk(KERN_INFO "QueueOpen Function Done");
+        queue_trim(dev);
+        up(&dev->sem);
+    }
+    return 0;
+}
+int queue_release(struct inode *inode, struct file *filp)
+{
+    return 0;
+}
+
+long queue_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+{
+	return 0;
+}
+ssize_t queue_read(struct file *filp, char __user *buf, size_t count,loff_t *f_pos)
+{
+	int ret;
+	struct queue_dev *dev = filp->private_data;
+	printk(KERN_INFO "queue: Reading from device");
+	
+	ret = copy_to_user(buf,dev->data,count);
+	return ret;
+}
+ssize_t queue_write(struct file *filp, const char __user *buf, size_t count,loff_t *f_pos)
+{
+	int ret;
+	struct queue_dev *dev = filp->private_data;
+	printk(KERN_INFO "queue: Writing to device");
+
+    if (down_interruptible(&dev->sem))
+        return -ERESTARTSYS;
+        
+	ret = copy_from_user(dev->data,buf,count);
+
+out:
+    up(&dev->sem);
+	return ret;
+}
 
 struct file_operations queue_fops = {
-    .owner =    THIS_MODULE
-    /*
-    .llseek =   scull_llseek,
-    .read =     scull_read,
-    .write =    scull_write,
-    .unlocked_ioctl =  scull_ioctl,
-    .open =     scull_open,
-    .release =  scull_release,
-    */
+    .owner =    THIS_MODULE,
+    .open =     queue_open,
+    .unlocked_ioctl =  queue_ioctl,
+    .release =  queue_release,
+    .read =     queue_read,
+    .write =    queue_write,
+    
 };
-
 
 int queue_init_module(void)
 {
 	dev_t devno;
 	struct queue_dev *dev;
-	printk(KERN_INFO "Hello Everyone, I am queue and My Device Couunt: %d \n",queue_nr_devs);	
+	printk(KERN_INFO "queue: Hello, I am queue and My Device Count: %d \n",queue_nr_devs);	
 	
 	if(queue_major)
 	{
@@ -91,7 +143,8 @@ int queue_init_module(void)
 	for(i = 0; i < queue_nr_devs; i++)
 	{
 		dev = &queue_devices[i];
-		//dev->data = "";
+		
+		strcpy(dev->data,"MK");
 		sema_init(&dev->sem,1);
 		devno = MKDEV(queue_major,queue_minor+i);
 		cdev_init(&dev->cdev,&queue_fops);
