@@ -33,7 +33,7 @@ int err;
 int i;
 
 struct queue_dev{
-	char data[500];
+	char data[11];
 	struct semaphore sem;
 	struct cdev cdev;
 };
@@ -86,7 +86,8 @@ ssize_t queue_read(struct file *filp, char __user *buf, size_t count,loff_t *f_p
 	printk(KERN_INFO "queue: Reading from device");
 	
 	ret = copy_to_user(buf,dev->data,sizeof(dev->data)/sizeof(char));
-	return ret;
+	(*f_pos) += 11;
+	return sizeof(dev->data)/sizeof(char);
 }
 
 ssize_t queue_write(struct file *filp, const char __user *buf, size_t count,loff_t *f_pos)
