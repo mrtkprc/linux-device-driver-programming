@@ -7,8 +7,7 @@
 int main(int argc, char **argv)
 {
 	int fd,res;
-	char read_buf[300];
-	char write_buf[] = "OmerRecep";
+	char read_buf[500];
 	fd = open(DEVICE,O_RDWR);
 	
 	if(fd == -1)
@@ -17,11 +16,9 @@ int main(int argc, char **argv)
 		exit(-1);
 	}
 	printf("Please, enter message: ");
-	scanf("%s",read_buf);
-	//read(fd,read_buf,sizeof(read_buf));
+	scanf(" %[^\n]",read_buf);
 	res = write(fd,read_buf,sizeof(read_buf));
-	//printf("Reading Data: %s\n",read_buf);
-	printf("Writing Data: %d\n",res);
+	printf("Writing Data: %s\n",read_buf);
 	return 0;
 }
 
