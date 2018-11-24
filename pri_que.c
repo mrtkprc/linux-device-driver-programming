@@ -96,6 +96,7 @@ ssize_t queue_write(struct file *filp, const char __user *buf, size_t count,loff
 	printk(KERN_INFO "queue: Writing to device");
 	ret = copy_from_user(dev->data,buf,sizeof(dev->data)/sizeof(char));
 	return ret;
+	###
 }
 
 long queue_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
