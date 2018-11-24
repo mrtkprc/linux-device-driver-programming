@@ -35,7 +35,6 @@ int i;
 
 struct queue_dev{
 	char data[500];
-	int message_count;
 	struct semaphore sem;
 	struct cdev cdev;
 };
@@ -106,8 +105,8 @@ ssize_t queue_write(struct file *filp, const char __user *buf, size_t count,loff
 	struct queue_dev *dev = filp->private_data;
 	strcat(buf, "\0");
 	int x = strlen(buf);
-
 	ssize_t len = min(x - *f_pos, count);
+	printk(KERN_INFO "Length in writing: %u\n",len);
 	if (len <= 0)
 		return 0;
 	printk(KERN_INFO "queue: Writing to device");
@@ -166,8 +165,8 @@ int queue_init_module(void)
 	{
 		dev = &queue_devices[i];
 		
-		strcpy(dev->data,"Latif-Mert");
-		dev->message_count = strlen("Latif-Mert")+1;
+		//strcpy(dev->data,"Latif-Mert");
+		
 		sema_init(&dev->sem,1);
 		devno = MKDEV(queue_major,queue_minor+i);
 		cdev_init(&dev->cdev,&queue_fops);
