@@ -7,7 +7,7 @@
 int main(int argc, char **argv)
 {
 	int fd,res;
-	char write_buf[300];
+	char write_buf[500];
 	fd = open(DEVICE,O_RDWR);
 	
 	if(fd == -1)

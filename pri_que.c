@@ -75,7 +75,7 @@ int queue_open(struct inode *inode, struct file *filp)
 		printk(KERN_ALERT "queue: Semaphore starting error\n");
 		return -1;
 	}
-    printk(KERN_INFO "queue: Function Done");
+    printk(KERN_INFO "queue: Open Function Done");
 	return 0;
 }
 
@@ -91,7 +91,11 @@ ssize_t queue_read(struct file *filp, char __user *buf, size_t count,loff_t *f_p
 
 ssize_t queue_write(struct file *filp, const char __user *buf, size_t count,loff_t *f_pos)
 {
-	return 0;
+	int ret;
+	struct queue_dev *dev = filp->private_data;
+	printk(KERN_INFO "queue: Writing to device");
+	ret = copy_from_user(dev->data,buf,sizeof(dev->data)/sizeof(char));
+	return ret;
 }
 
 long queue_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
