@@ -14,9 +14,8 @@
 #include <asm/switch_to.h>	/* cli(), *_flags */
 #include <asm/uaccess.h>	/* copy_*_user */
 
-
 #define QUEUE_MAJOR 0
-#define QUEUE_NR_DEVS 2
+#define QUEUE_NR_DEVS 1
 
 int queue_major = QUEUE_MAJOR;
 int queue_minor = 0;
@@ -34,69 +33,70 @@ int err;
 int i;
 
 struct queue_dev{
-	char data[100];
+	char data[500];
 	struct semaphore sem;
 	struct cdev cdev;
-	
 };
 
 struct queue_dev *queue_devices;
 
-/*Function Prototype Start*/
-void queue_cleanup_module(void);
-int queue_trim(struct queue_dev *dev);
-/*Function Prototype End*/
+void queue_cleanup_module(void)
+{
+	dev_t devno = MKDEV(queue_major, queue_minor);
+
+    if (queue_devices) 
+    {
+        for (i = 0; i < queue_nr_devs; i++) 
+        {
+            //queue_trim(queue_devices + i);
+            cdev_del(&queue_devices[i].cdev);
+        }
+    kfree(queue_devices);
+    }
+
+    unregister_chrdev_region(devno, queue_nr_devs);
+	printk(KERN_INFO "queue: Module Finished\n");
+}
+
+int queue_release(struct inode *inode, struct file *filp)
+{
+    struct queue_dev *dev = filp->private_data;
+	up(&dev->sem);
+    return 0;
+}
 
 int queue_open(struct inode *inode, struct file *filp)
 {
 	struct queue_dev *dev;
-
     dev = container_of(inode->i_cdev, struct queue_dev, cdev);
     filp->private_data = dev;
-    
-    /* trim the device if open was write-only */
-    if ((filp->f_flags & O_ACCMODE) == O_WRONLY) {
-        if (down_interruptible(&dev->sem))
-            return -ERESTARTSYS;
-        
-        printk(KERN_INFO "QueueOpen Function Done");
-        queue_trim(dev);
-        up(&dev->sem);
-    }
-    return 0;
-}
-int queue_release(struct inode *inode, struct file *filp)
-{
-    return 0;
-}
-
-long queue_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
-{
+    if (down_interruptible(&dev->sem) != 0)
+    {
+		printk(KERN_ALERT "queue: Semaphore starting error\n");
+		return -1;
+	}
+    printk(KERN_INFO "queue: Function Done");
 	return 0;
 }
+
 ssize_t queue_read(struct file *filp, char __user *buf, size_t count,loff_t *f_pos)
 {
 	int ret;
 	struct queue_dev *dev = filp->private_data;
 	printk(KERN_INFO "queue: Reading from device");
 	
-	ret = copy_to_user(buf,dev->data,count);
+	ret = copy_to_user(buf,dev->data,sizeof(dev->data)/sizeof(char));
 	return ret;
 }
+
 ssize_t queue_write(struct file *filp, const char __user *buf, size_t count,loff_t *f_pos)
 {
-	int ret;
-	struct queue_dev *dev = filp->private_data;
-	printk(KERN_INFO "queue: Writing to device");
+	return 0;
+}
 
-    if (down_interruptible(&dev->sem))
-        return -ERESTARTSYS;
-        
-	ret = copy_from_user(dev->data,buf,count);
-
-out:
-    up(&dev->sem);
-	return ret;
+long queue_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+{
+	return 0;
 }
 
 struct file_operations queue_fops = {
@@ -106,14 +106,13 @@ struct file_operations queue_fops = {
     .release =  queue_release,
     .read =     queue_read,
     .write =    queue_write,
-    
 };
 
 int queue_init_module(void)
 {
 	dev_t devno;
 	struct queue_dev *dev;
-	printk(KERN_INFO "queue: Hello, I am queue and My Device Count: %d \n",queue_nr_devs);	
+	printk(KERN_INFO "queue: Module Started\n");
 	
 	if(queue_major)
 	{
@@ -134,21 +133,21 @@ int queue_init_module(void)
     queue_devices = kmalloc(queue_nr_devs*sizeof(struct queue_dev),GFP_KERNEL);
 	
 	if (!queue_devices) {
+		printk("queue: Unsufficent memory area\n");
         result = -ENOMEM;
         goto fail;
     }
-    
+    printk("queue: Malloc Success\n");
     memset(queue_devices, 0, queue_nr_devs * sizeof(struct queue_dev));
 	
 	for(i = 0; i < queue_nr_devs; i++)
 	{
 		dev = &queue_devices[i];
 		
-		strcpy(dev->data,"MK");
+		strcpy(dev->data,"Latif-Mert");
 		sema_init(&dev->sem,1);
 		devno = MKDEV(queue_major,queue_minor+i);
 		cdev_init(&dev->cdev,&queue_fops);
-		
 		dev->cdev.owner = THIS_MODULE;
         dev->cdev.ops = &queue_fops;
         err = cdev_add(&dev->cdev, devno, 1);
@@ -158,33 +157,14 @@ int queue_init_module(void)
 	}
 	printk(KERN_INFO "queue: Major number: %d \n",queue_major);
 	return 0;
+	
 fail:
 		queue_cleanup_module();
 		return result;
+	
 }
 
-int queue_trim(struct queue_dev *dev)
-{
-	return 0;
-}
-
-void queue_cleanup_module(void)
-{
-    dev_t devno = MKDEV(queue_major, queue_minor);
-
-    if (queue_devices) 
-    {
-        for (i = 0; i < queue_nr_devs; i++) 
-        {
-            queue_trim(queue_devices + i);
-            cdev_del(&queue_devices[i].cdev);
-        }
-    kfree(queue_devices);
-    }
-
-    unregister_chrdev_region(devno, queue_nr_devs);
-	printk(KERN_INFO "queue: Goodbye\n");
-}
 
 module_init(queue_init_module);
 module_exit(queue_cleanup_module);
+
