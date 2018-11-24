@@ -32,8 +32,9 @@ int result;
 int err;
 int i;
 
+
 struct queue_dev{
-	char data[11];
+	char *data;
 	struct semaphore sem;
 	struct cdev cdev;
 };
@@ -84,10 +85,19 @@ ssize_t queue_read(struct file *filp, char __user *buf, size_t count,loff_t *f_p
 	int ret;
 	struct queue_dev *dev = filp->private_data;
 	printk(KERN_INFO "queue: Reading from device");
+	ssize_t len = min(500 - *f_pos,count);
+
+	if(len <= 0)
+	{
+		return 0;
+	}
+
+
+	ret = copy_to_user(buf,dev->data,len);
+
+	(*f_pos) += len;
 	
-	ret = copy_to_user(buf,dev->data,sizeof(dev->data)/sizeof(char));
-	(*f_pos) += 11;
-	return sizeof(dev->data)/sizeof(char);
+	return len;
 }
 
 ssize_t queue_write(struct file *filp, const char __user *buf, size_t count,loff_t *f_pos)
@@ -95,8 +105,14 @@ ssize_t queue_write(struct file *filp, const char __user *buf, size_t count,loff
 	int ret;
 	struct queue_dev *dev = filp->private_data;
 	printk(KERN_INFO "queue: Writing to device");
-	ret = copy_from_user(dev->data,buf,sizeof(dev->data)/sizeof(char));
-	return ret;
+	ssize_t len = min(500 - *f_pos,count);
+	if(len <= 0)
+	{
+		return 0;
+	}
+	ret = copy_from_user(dev->data,buf,len);
+	(*f_pos) += len;
+	return len;
 }
 
 long queue_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
