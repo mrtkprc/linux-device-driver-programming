@@ -34,7 +34,8 @@ int i;
 
 
 struct queue_dev{
-	char *data;
+	char data[500];
+	int message_count;
 	struct semaphore sem;
 	struct cdev cdev;
 };
@@ -83,20 +84,18 @@ int queue_open(struct inode *inode, struct file *filp)
 ssize_t queue_read(struct file *filp, char __user *buf, size_t count,loff_t *f_pos)
 {
 	int ret;
-	struct queue_dev *dev = filp->private_data;
-	printk(KERN_INFO "queue: Reading from device");
-	ssize_t len = min(500 - *f_pos,count);
-
-	if(len <= 0)
-	{
-		return 0;
-	}
-
-
-	ret = copy_to_user(buf,dev->data,len);
-
-	(*f_pos) += len;
 	
+	struct queue_dev *dev = filp->private_data;
+	ssize_t len = min(500 - *f_pos, count);
+	//*f_pos = 0;
+	if (len <= 0)
+		return 0;
+	
+	printk(KERN_INFO "queue: Reading from device");
+	
+
+	ret = copy_to_user(buf,dev->data,sizeof(dev->data)/sizeof(char));
+	*f_pos += len;
 	return len;
 }
 
@@ -104,14 +103,17 @@ ssize_t queue_write(struct file *filp, const char __user *buf, size_t count,loff
 {
 	int ret;
 	struct queue_dev *dev = filp->private_data;
-	printk(KERN_INFO "queue: Writing to device");
-	ssize_t len = min(500 - *f_pos,count);
-	if(len <= 0)
-	{
+	
+	ssize_t len = min(500 - *f_pos, count);
+	//*f_pos = 0;
+	if (len <= 0)
 		return 0;
-	}
+	dev->message_count = count;
+	printk(KERN_INFO "queue: Writing to device");
+	//strcpy(dev->data,buf);
 	ret = copy_from_user(dev->data,buf,len);
-	(*f_pos) += len;
+	
+	*f_pos += len;
 	return len;
 }
 
@@ -166,6 +168,7 @@ int queue_init_module(void)
 		dev = &queue_devices[i];
 		
 		strcpy(dev->data,"Latif-Mert");
+		dev->message_count = strlen("Latif-Mert")+1;
 		sema_init(&dev->sem,1);
 		devno = MKDEV(queue_major,queue_minor+i);
 		cdev_init(&dev->cdev,&queue_fops);
