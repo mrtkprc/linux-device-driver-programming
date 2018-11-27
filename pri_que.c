@@ -99,22 +99,22 @@ ssize_t queue_read(struct file *filp, char __user *buf, size_t count,loff_t *f_p
 	ssize_t msg_size;
 	ssize_t read_length;
 	char sent_data[1500];
-	// printk(KERN_INFO "Linked List Head : %s\n",dev->message_head->data);	//INITIAL
-	// printk(KERN_INFO "Linked List Next : %s\n",list_entry(dev->message_head->list.next,device_message,list)->data); //THIRD
-	// printk(KERN_INFO "Linked List Prev : %s\n",list_entry(dev->message_head->list.prev,device_message,list)->data); //SECOND
-	// printk(KERN_INFO "Linked List Prev Next : %s\n",list_entry(dev->message_head->list.prev->next,device_message,list)->data); //INITIAL
-	strcpy(sent_data,dev->message_head->data);//,strlen(dev->message_head->data));
+	int messages_counter = 0;
+
+	strcpy(sent_data,dev->message_head->data);
+	messages_counter += strlen(dev->message_head->data);
 	list_for_each(node,&(dev->message_head->list))
 	{
 		dev_msg = list_entry(node,device_message,list);
+		messages_counter += strlen(dev->message_head->data);
 		strcat(sent_data,dev_msg->data);
 		printk(KERN_INFO "iterated values: %s\n",dev_msg->data);
 	}
+	printk(KERN_INFO "Messages Counter: %d\n",messages_counter);
 	strcat(sent_data,"\n\0");
 	
-	// strcpy(buf,sent_data);
 	printk(KERN_INFO "Reading f_pos: %u and count: %u\n",*f_pos,count);
-	msg_size = strlen(sent_data)+1;
+	msg_size = strlen(sent_data)+1; // +1 for null character
 	if(*f_pos >= msg_size)
 	{
 		printk(KERN_INFO "f_pos is greater than count\n");
@@ -159,9 +159,6 @@ ssize_t queue_write(struct file *filp, const char __user *buf, size_t count,loff
 	
 	ret = copy_from_user(dev->message_head->data,"buf",len);
 	strcpy(dev->message_head->data,"slm\n");
-	
-	
-	
 	
 	*f_pos += len;
 	return len;
@@ -229,18 +226,20 @@ int queue_init_module(void)
         err = cdev_add(&dev->cdev, devno, 1);
 
 		dev->message_head = kmalloc(sizeof(device_message),GFP_KERNEL);
-		strcpy(dev->message_head->data,"INITIAL");
+		strcpy(dev->message_head->data,"X");
 		INIT_LIST_HEAD(&(dev->message_head->list));
 		
 		newMsg = kmalloc(sizeof(device_message),GFP_KERNEL);
-		strcpy(newMsg->data,"SECOND");
+		strcpy(newMsg->data,"Y");
 		list_add_tail(&newMsg->list,&dev->message_head->list);
 
 		newMsg = kmalloc(sizeof(device_message),GFP_KERNEL);
-		strcpy(newMsg->data,"THIRD");
+		strcpy(newMsg->data,"Z");
 		list_add_tail(&newMsg->list,&dev->message_head->list);
 
-
+		newMsg = kmalloc(sizeof(device_message),GFP_KERNEL);
+		strcpy(newMsg->data,"T");
+		list_add_tail(&newMsg->list,&dev->message_head->list);
 		
 
 
