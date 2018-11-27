@@ -36,7 +36,8 @@ int i;
 
 typedef struct dev_message
 {
-	char data[500];
+	char *data;
+	int *message_count;
 	struct list_head list;
 }device_message;
 
@@ -98,23 +99,38 @@ ssize_t queue_read(struct file *filp, char __user *buf, size_t count,loff_t *f_p
 	struct queue_dev *dev = filp->private_data;
 	ssize_t msg_size;
 	ssize_t read_length;
-	char sent_data[1500];
-	int messages_counter = 0;
+	char *sent_data;
+	size_t messages_counter = 0;
 
-	strcpy(sent_data,dev->message_head->data);
-	messages_counter += strlen(dev->message_head->data);
+	if(dev->message_head == NULL)
+	{
+		printk(KERN_ALERT "dev message head is null\n");
+		copy_to_user(buf,"\0",sizeof("\0"));
+		return 0;
+	}
+	printk(KERN_INFO "Before message counter\n");
+	messages_counter += (*(dev->message_head->message_count))-1;
+	printk("MESSAGES COUNTER: %d\n",messages_counter);
+
+	sent_data = kmalloc(messages_counter * sizeof(char),GFP_KERNEL);
+	strncpy(sent_data,dev->message_head->data,messages_counter);
+	
 	list_for_each(node,&(dev->message_head->list))
 	{
+		printk(KERN_INFO "List for each started \n");
 		dev_msg = list_entry(node,device_message,list);
-		messages_counter += strlen(dev->message_head->data);
-		strcat(sent_data,dev_msg->data);
+		messages_counter += (*(dev_msg->message_count))-1;
+
+		sent_data = krealloc(sent_data,messages_counter * sizeof(char),GFP_KERNEL);
+
+		strncat(sent_data,dev_msg->data,(*(dev_msg->message_count))-1);
 		printk(KERN_INFO "iterated values: %s\n",dev_msg->data);
 	}
-	printk(KERN_INFO "Messages Counter: %d\n",messages_counter);
-	strcat(sent_data,"\n\0");
+	sent_data = krealloc(sent_data,(messages_counter + 1) * sizeof(char),GFP_KERNEL);
+	strcat(sent_data+messages_counter,"\0");
 	
 	printk(KERN_INFO "Reading f_pos: %u and count: %u\n",*f_pos,count);
-	msg_size = strlen(sent_data)+1; // +1 for null character
+	msg_size = messages_counter;//strlen(sent_data)+1; // +1 for null character
 	if(*f_pos >= msg_size)
 	{
 		printk(KERN_INFO "f_pos is greater than count\n");
@@ -142,23 +158,47 @@ ssize_t queue_read(struct file *filp, char __user *buf, size_t count,loff_t *f_p
 
 ssize_t queue_write(struct file *filp, const char __user *buf, size_t count,loff_t *f_pos)
 {
-	int ret;
-	//device_message *dev_msg = kmalloc(sizeof(device_message),GFP_KERNEL);
-	
+	int ret;	
 	struct queue_dev *dev = filp->private_data;
-	//strcat(buf, "\0");
-	ssize_t x = strlen(buf);
-	ssize_t len = min(x - *f_pos, count);
-	printk(KERN_INFO "Length in writing: %u\n",len);
+	ssize_t buffer_size = count;
+	device_message *newMsg=NULL;
+	ssize_t len;
+
+	if(*f_pos >= buffer_size)
+	{
+		printk(KERN_INFO "f_pos is greater than count in writing\n");
+		return 0;
+	}
+	len = min(buffer_size - *f_pos, count);
 	if (len <= 0)
 		return 0;
-	printk(KERN_INFO "queue: Writing to device: %s\n",buf);
-	//strcpy(dev_msg->data,buf);
 	
 
+	newMsg = (newMsg == NULL ? ((device_message *)kmalloc(count * sizeof(char) ,GFP_KERNEL)) : newMsg);
 	
-	ret = copy_from_user(dev->message_head->data,"buf",len);
-	strcpy(dev->message_head->data,"slm\n");
+	newMsg->data = (char *)kmalloc(count * sizeof(char) ,GFP_KERNEL);
+	newMsg->message_count = (int *)kmalloc(sizeof(int) ,GFP_KERNEL);
+	*(newMsg->message_count) = count;
+
+	printk(KERN_INFO "newmsg->counter and length buf respectively: %u and %u in writing\n", *(newMsg->message_count), strlen(buf));
+	if(newMsg != NULL && copy_from_user(newMsg->data,buf,len))
+	{
+		printk(KERN_ALERT "Error in copy_from_user \n");
+		return -1;
+	}
+	else
+	{
+		dev->message_head = (device_message *)kmalloc(sizeof(device_message),GFP_KERNEL);
+		dev->message_head->message_count = (newMsg->message_count);
+		dev->message_head->data = newMsg->data;
+		if(dev->message_head == NULL)
+		{
+			printk(KERN_INFO "Head is created\n");
+			INIT_LIST_HEAD(&(dev->message_head->list));
+		}
+		else
+			list_add_tail(&newMsg->list,&dev->message_head->list);
+	}
 	
 	*f_pos += len;
 	return len;
@@ -216,15 +256,16 @@ int queue_init_module(void)
 	{
 		dev = &queue_devices[i];
 		
-		//strcpy(dev->data,"Latif-Mert");
-		
 		sema_init(&dev->sem,1);
 		devno = MKDEV(queue_major,queue_minor+i);
 		cdev_init(&dev->cdev,&queue_fops);
 		dev->cdev.owner = THIS_MODULE;
         dev->cdev.ops = &queue_fops;
         err = cdev_add(&dev->cdev, devno, 1);
+		dev->message_head = NULL;
 
+
+		/*
 		dev->message_head = kmalloc(sizeof(device_message),GFP_KERNEL);
 		strcpy(dev->message_head->data,"X");
 		INIT_LIST_HEAD(&(dev->message_head->list));
@@ -240,7 +281,7 @@ int queue_init_module(void)
 		newMsg = kmalloc(sizeof(device_message),GFP_KERNEL);
 		strcpy(newMsg->data,"T");
 		list_add_tail(&newMsg->list,&dev->message_head->list);
-		
+		*/
 
 
 
