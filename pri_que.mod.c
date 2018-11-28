@@ -21,20 +21,19 @@ __attribute__((section("__versions"))) = {
 	{ 0x67da8143, __VMLINUX_SYMBOL_STR(param_ops_int) },
 	{ 0xb03169b1, __VMLINUX_SYMBOL_STR(cdev_add) },
 	{ 0x2f5ae6d4, __VMLINUX_SYMBOL_STR(cdev_init) },
-	{ 0x8329e6f0, __VMLINUX_SYMBOL_STR(memset) },
 	{ 0x29537c9e, __VMLINUX_SYMBOL_STR(alloc_chrdev_region) },
 	{ 0xd8e484f0, __VMLINUX_SYMBOL_STR(register_chrdev_region) },
 	{ 0x7485e15e, __VMLINUX_SYMBOL_STR(unregister_chrdev_region) },
 	{ 0x37a0cba, __VMLINUX_SYMBOL_STR(kfree) },
 	{ 0x48077668, __VMLINUX_SYMBOL_STR(cdev_del) },
+	{ 0xe914e41e, __VMLINUX_SYMBOL_STR(strcpy) },
 	{ 0x4f6b400b, __VMLINUX_SYMBOL_STR(_copy_from_user) },
 	{ 0xd0d8621b, __VMLINUX_SYMBOL_STR(strlen) },
 	{ 0xf0e46b3d, __VMLINUX_SYMBOL_STR(kmem_cache_alloc_trace) },
 	{ 0xc8376e72, __VMLINUX_SYMBOL_STR(kmalloc_caches) },
-	{ 0x70d1f8f3, __VMLINUX_SYMBOL_STR(strncat) },
-	{ 0x61651be, __VMLINUX_SYMBOL_STR(strcat) },
 	{ 0xc2d711e1, __VMLINUX_SYMBOL_STR(krealloc) },
-	{ 0xb6ed1e53, __VMLINUX_SYMBOL_STR(strncpy) },
+	{ 0x70d1f8f3, __VMLINUX_SYMBOL_STR(strncat) },
+	{ 0x8329e6f0, __VMLINUX_SYMBOL_STR(memset) },
 	{ 0x12da5bb2, __VMLINUX_SYMBOL_STR(__kmalloc) },
 	{ 0x4f8b5ddb, __VMLINUX_SYMBOL_STR(_copy_to_user) },
 	{ 0x50eedeb8, __VMLINUX_SYMBOL_STR(printk) },
@@ -49,4 +48,4 @@ __attribute__((section(".modinfo"))) =
 "depends=";
 
 
-MODULE_INFO(srcversion, "AFEE57541DC181DC9720190");
+MODULE_INFO(srcversion, "AC7BA083A13DA1AE5364DF4");
