@@ -52,6 +52,28 @@ typedef struct queue_dev
 
 struct queue_dev *queue_devices;
 
+void free_device_message(device_message *dev_msg)
+{
+  kfree(dev_msg->message_count);
+  kfree(dev_msg->data);
+}
+void free_all_device_message(device_message *head)
+{
+  struct list_head *node;
+  device_message *dev_msg;
+  list_for_each(node,&(head->list))
+  {
+    printk(KERN_INFO "List for each started \n");
+    dev_msg = list_entry(node,device_message,list);
+    free_device_message(dev_msg);
+  }
+}
+void free_queue_device(queue_device *dev)
+{
+  free_all_device_message(dev->message_head);
+  kfree(dev->message_head);
+  kfree(dev);
+}
 
 void queue_cleanup_module(void)
 {
@@ -61,7 +83,7 @@ void queue_cleanup_module(void)
     {
         for (i = 0; i < queue_nr_devs; i++) 
         {
-            //queue_trim(queue_devices + i);
+            free_queue_device(queue_devices + i);
             cdev_del(&queue_devices[i].cdev);
         }
     kfree(queue_devices);
