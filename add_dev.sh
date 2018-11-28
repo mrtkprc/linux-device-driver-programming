@@ -12,5 +12,4 @@ do
     mknod "$base_path$c" c $(grep queue /proc/devices | grep [0123456789] | cut -d' ' -f1) $c
 done 
 
-dmesg -c &&
-# clear
+dmesg -c

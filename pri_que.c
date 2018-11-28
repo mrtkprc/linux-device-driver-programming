@@ -77,8 +77,7 @@ void free_queue_device(queue_device *dev)
 
 void queue_cleanup_module(void)
 {
-  dev_t devno = MKDEV(queue_major, queue_minor);
-
+   dev_t devno = MKDEV(queue_major, queue_minor);
     if (queue_devices) 
     {
         for (i = 0; i < queue_nr_devs; i++) 
@@ -90,13 +89,13 @@ void queue_cleanup_module(void)
     }
 
     unregister_chrdev_region(devno, queue_nr_devs);
-  printk(KERN_INFO "queue: Module Finished\n");
+    printk(KERN_INFO "queue: Module Finished\n");
 }
 
 int queue_release(struct inode *inode, struct file *filp)
 {
     struct queue_dev *dev = filp->private_data;
-  up(&dev->sem);
+    up(&dev->sem);
     return 0;
 }
 
@@ -107,9 +106,9 @@ int queue_open(struct inode *inode, struct file *filp)
     filp->private_data = dev;
     if (down_interruptible(&dev->sem) != 0)
     {
-    printk(KERN_ALERT "queue: Semaphore starting error\n");
-    return -1;
-  }
+      printk(KERN_ALERT "queue: Semaphore starting error\n");
+      return -ERESTARTSYS;
+    }
     printk(KERN_INFO "queue: Open Function Done");
   return 0;
 }
@@ -122,7 +121,6 @@ ssize_t queue_read(struct file *filp, char __user *buf, size_t count,loff_t *f_p
   struct queue_dev *dev = filp->private_data;
   if(MINOR(dev->cdev.dev) == 0)
     return -EINVAL;
-
 
   ssize_t msg_size;
   ssize_t read_length;
@@ -182,7 +180,7 @@ ssize_t queue_read(struct file *filp, char __user *buf, size_t count,loff_t *f_p
   if(copy_to_user(buf,sent_data,read_length * sizeof(char)))
   {
     printk(KERN_ALERT "All data are not copied\n"); // Buralari duzelt semaphıre filan kaldir
-    return 0;
+    return -EFAULT;
   }
   
   *f_pos += read_length;
@@ -220,7 +218,7 @@ ssize_t queue_write(struct file *filp, const char __user *buf, size_t count,loff
   if(newMsg == NULL || newMsg->data == NULL || copy_from_user(newMsg->data,buf,len))
   {
     printk(KERN_ALERT "Error in copy_from_user \n");
-    return -1;
+    return -EFAULT;
   }
   else
   {
@@ -238,8 +236,6 @@ ssize_t queue_write(struct file *filp, const char __user *buf, size_t count,loff
       strcpy(dev->message_head->data,newMsg->data);
       printk(KERN_INFO "Head is created\n");
       INIT_LIST_HEAD(&(dev->message_head->list));
-      //printk("Wrting in head :%s \n",dev->message_head->data);
-      //free işlemi var newMsg için
       
     }
     else
@@ -264,7 +260,7 @@ void pop_first_message(char *buf)
     {
         dev = (queue_devices + i);
         printk("pop_first_message\n");
-        if(dev == NULL) //|| dev->message_head->list.next == dev->message_head->list.prev)
+        if(dev == NULL) 
         {
             printk("continue: %d \n",i);
             continue;
@@ -282,13 +278,7 @@ void pop_first_message(char *buf)
             return ;
           }
           else
-          {
             continue;
-          }
-          
-          //printk("Reading data: %s \n",dev->message_head->data);
-          //msg = list_entry(dev->message_head->list.next,device_message,list);  
-          
         }
 
     }
@@ -372,7 +362,6 @@ int queue_init_module(void)
     dev->cdev.owner = THIS_MODULE;
         dev->cdev.ops = &queue_fops;
         err = cdev_add(&dev->cdev, devno, 1);
-    //dev->message_head = NULL;
 
       dev->message_head = (device_message *)kmalloc(sizeof(device_message),GFP_KERNEL);
       dev->message_head->data = (char *)kmalloc(1*sizeof(char),GFP_KERNEL);
@@ -381,9 +370,6 @@ int queue_init_module(void)
       memset(dev->message_head->data,0,sizeof(char));
       strcpy(dev->message_head->data,"");
       INIT_LIST_HEAD(&(dev->message_head->list));
-      //printk("Wrting in head :%s \n",dev->message_head->data);
-      //free işlemi var newMsg için
-    
 
     if (err)
       printk(KERN_NOTICE "queue: Error %d adding queue%d", err, i);  
@@ -395,9 +381,7 @@ int queue_init_module(void)
 fail:
     queue_cleanup_module();
     return result;
-  
 }
-
 
 module_init(queue_init_module);
 module_exit(queue_cleanup_module);
