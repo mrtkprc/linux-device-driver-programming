@@ -130,8 +130,9 @@ ssize_t queue_read(struct file *filp, char __user *buf, size_t count,loff_t *f_p
     prev_msg_count = messages_counter;
   }
   printk("MESSAGES COUNTER at end of list for each: %d\n",messages_counter);
-  sent_data = (char *)krealloc(sent_data,(messages_counter + 1) * sizeof(char),GFP_KERNEL);
+  sent_data = (char *)krealloc(sent_data,(messages_counter + 2) * sizeof(char),GFP_KERNEL);
   *(sent_data + messages_counter) = '\0';
+  strcat(sent_data,"\n");
   printk("Send data(after list for each): %s\n",sent_data);
   
   printk(KERN_INFO "Reading f_pos: %u and count: %u\n",*f_pos,count);
