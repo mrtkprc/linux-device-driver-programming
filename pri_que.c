@@ -242,19 +242,32 @@ void pop_first_message(char *buf)
     {
         dev = (queue_devices + i);
         printk("pop_first_message\n");
-        if(dev == NULL || dev->message_head->list.next == dev->message_head->list.prev)
+        if(dev == NULL) //|| dev->message_head->list.next == dev->message_head->list.prev)
         {
-          printk("continue: %d \n",i);
+            printk("continue: %d \n",i);
             continue;
         }
-        printk("Reading data: %s \n",dev->message_head->data);
-        msg = list_entry(dev->message_head->list.next,device_message,list);  
-        strcpy(buf,msg->data);
-        *(buf+(*(msg->message_count))) = '\0';
-        printk("POPXXXXX: %d \n",*(msg->message_count));
-        
-        list_del(dev->message_head->list.next);
-        
+        else
+        {
+          msg = list_entry(dev->message_head->list.next,device_message,list);  
+
+          if((*(msg->message_count)) > 1)
+          {
+            strcpy(buf,msg->data);
+            *(buf+(*(msg->message_count))) = '\0';
+            printk("POPXXXXX: %d \n",*(msg->message_count));
+            list_del(dev->message_head->list.next);
+            return ;
+          }
+          else
+          {
+            continue;
+          }
+          
+          //printk("Reading data: %s \n",dev->message_head->data);
+          //msg = list_entry(dev->message_head->list.next,device_message,list);  
+          
+        }
 
     }
 }
