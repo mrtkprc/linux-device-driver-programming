@@ -1,4 +1,4 @@
 #!/bin/bash
  
-./rem_dev.sh &&
-./add_dev.sh
+./rem_dev.sh $1 &&
+./add_dev.sh $1
