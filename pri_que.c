@@ -216,6 +216,7 @@ ssize_t queue_write(struct file *filp, const char __user *buf, size_t count,loff
       strcpy(dev->message_head->data,newMsg->data);
       printk(KERN_INFO "Head is created\n");
       INIT_LIST_HEAD(&(dev->message_head->list));
+      //printk("Wrting in head :%s \n",dev->message_head->data);
       //free işlemi var newMsg için
       
     }
@@ -231,7 +232,7 @@ ssize_t queue_write(struct file *filp, const char __user *buf, size_t count,loff
   *f_pos += len;
   return len;
 }
-const char* pop_first_message(void)
+void pop_first_message(char *buf)
 {
     int i;
     struct queue_dev *dev;
@@ -241,7 +242,10 @@ const char* pop_first_message(void)
         printk("pop_first_message\n");
         if(dev == NULL || dev->message_head == NULL || dev->message_head->data == NULL)
             continue;
-        return (const char *)dev->message_head->data;
+        printk("Reading data: %s \n",dev->message_head->data);
+        strcpy(buf,dev->message_head->data);
+        *(buf+(*(dev->message_head->message_count))) = '\0';
+
     }
     return NULL;
 }
@@ -259,7 +263,7 @@ long queue_ioctl(struct file *filp, unsigned int cmd, char *arg)
     {
         case QUEUE_POP:
             printk("POPPPPPPPPPPP Switch\n");
-            strcpy(arg,pop_first_message());
+            pop_first_message(arg);
             return 0;
         break;
         default:
