@@ -20,7 +20,7 @@ int main(int argc, char **argv)
 	}
 	
 	res = ioctl(fd,QUEUE_POP,write_buf);
-	printf("IOCTL String and res: %s\n",write_buf);//,strerror(res));
+	printf("IOCTL String and res: %s",write_buf);//,strerror(res));
 	return 0;
 }
 

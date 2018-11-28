@@ -232,23 +232,33 @@ ssize_t queue_write(struct file *filp, const char __user *buf, size_t count,loff
   *f_pos += len;
   return len;
 }
+
 void pop_first_message(char *buf)
 {
-    int i;
+  int i;
     struct queue_dev *dev;
+    device_message *msg;
     for (i = 1; i < queue_nr_devs;i++)
     {
         dev = (queue_devices + i);
         printk("pop_first_message\n");
-        if(dev == NULL || dev->message_head == NULL || dev->message_head->data == NULL)
+        if(dev == NULL || dev->message_head->list.next == dev->message_head->list.prev)
+        {
+          printk("continue: %d \n",i);
             continue;
+        }
         printk("Reading data: %s \n",dev->message_head->data);
-        strcpy(buf,dev->message_head->data);
-        *(buf+(*(dev->message_head->message_count))) = '\0';
+        msg = list_entry(dev->message_head->list.next,device_message,list);  
+        strcpy(buf,msg->data);
+        *(buf+(*(msg->message_count))) = '\0';
+        printk("POPXXXXX: %d \n",*(msg->message_count));
+        
+        list_del(dev->message_head->list.next);
+        
 
     }
-    return NULL;
 }
+
 long queue_ioctl(struct file *filp, unsigned int cmd, char *arg)
 {
     int retval = -1;
@@ -298,7 +308,7 @@ int queue_init_module(void)
   else
   {
     result = alloc_chrdev_region(&devno, queue_minor, queue_nr_devs,"queue");
-        queue_major = MAJOR(devno);
+    queue_major = MAJOR(devno);
   }
   if (result < 0) 
   {
@@ -327,37 +337,21 @@ int queue_init_module(void)
     dev->cdev.owner = THIS_MODULE;
         dev->cdev.ops = &queue_fops;
         err = cdev_add(&dev->cdev, devno, 1);
-    dev->message_head = NULL;
+    //dev->message_head = NULL;
 
-
-    /*
-    dev->message_head = kmalloc(sizeof(device_message),GFP_KERNEL);
-    strcpy(dev->message_head->data,"X");
-    INIT_LIST_HEAD(&(dev->message_head->list));
+      dev->message_head = (device_message *)kmalloc(sizeof(device_message),GFP_KERNEL);
+      dev->message_head->data = (char *)kmalloc(1*sizeof(char),GFP_KERNEL);
+      dev->message_head->message_count = (int *)kmalloc(sizeof(int),GFP_KERNEL);
+      *(dev->message_head->message_count) = 1;
+      memset(dev->message_head->data,0,sizeof(char));
+      strcpy(dev->message_head->data,"");
+      INIT_LIST_HEAD(&(dev->message_head->list));
+      //printk("Wrting in head :%s \n",dev->message_head->data);
+      //free işlemi var newMsg için
     
-    newMsg = kmalloc(sizeof(device_message),GFP_KERNEL);
-    strcpy(newMsg->data,"Y");
-    list_add_tail(&newMsg->list,&dev->message_head->list);
 
-    newMsg = kmalloc(sizeof(device_message),GFP_KERNEL);
-    strcpy(newMsg->data,"Z");
-    list_add_tail(&newMsg->list,&dev->message_head->list);
-newMsg = kmalloc(sizeof(device_message),GFP_KERNEL);
-    strcpy(newMsg->data,"T");
-    list_add_tail(&newMsg->list,&dev->message_head->list);
-    */
-
-
-
-
-
-
-
-
-
-        
-        if (err)
-            printk(KERN_NOTICE "queue: Error %d adding queue%d", err, i);  
+    if (err)
+      printk(KERN_NOTICE "queue: Error %d adding queue%d", err, i);  
   }
   
   printk(KERN_INFO "queue: Major number: %d \n",queue_major);
