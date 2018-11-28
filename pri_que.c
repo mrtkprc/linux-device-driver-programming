@@ -93,9 +93,14 @@ int queue_open(struct inode *inode, struct file *filp)
 
 ssize_t queue_read(struct file *filp, char __user *buf, size_t count,loff_t *f_pos)
 {
+  
   struct list_head *node;
   device_message *dev_msg;
   struct queue_dev *dev = filp->private_data;
+  if(MINOR(dev->cdev.dev) == 0)
+    return -EINVAL;
+
+
   ssize_t msg_size;
   ssize_t read_length;
   char *sent_data;
@@ -165,6 +170,8 @@ ssize_t queue_write(struct file *filp, const char __user *buf, size_t count,loff
 {
   int ret;  
   struct queue_dev *dev = filp->private_data;
+  if(MINOR(dev->cdev.dev) == 0)
+    return -EINVAL;
   ssize_t buffer_size = count; //Terminator character dahil
   device_message *newMsg=NULL; 
   ssize_t len;
