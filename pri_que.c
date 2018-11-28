@@ -1,4 +1,3 @@
-
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/init.h>
@@ -15,6 +14,8 @@
 #include <asm/switch_to.h>  /* cli(), *_flags */
 #include <asm/uaccess.h>  /* copy_*_user */
 #include <linux/list.h>
+
+#include "queue_ioctl.h"
 
 #define QUEUE_MAJOR 0
 #define QUEUE_NR_DEVS 1
@@ -42,12 +43,12 @@ typedef struct dev_message
 }device_message;
 
 
-struct queue_dev
+typedef struct queue_dev
 {
   device_message *message_head;
   struct semaphore sem;
   struct cdev cdev;
-};
+}queue_device;
 
 struct queue_dev *queue_devices;
 
@@ -230,10 +231,43 @@ ssize_t queue_write(struct file *filp, const char __user *buf, size_t count,loff
   *f_pos += len;
   return len;
 }
-
-long queue_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+const char* pop_first_message(void)
 {
-  return 0;
+    int i;
+    struct queue_dev *dev;
+    for (i = 1; i < queue_nr_devs;i++)
+    {
+        dev = (queue_devices + i);
+        printk("pop_first_message\n");
+        if(dev == NULL || dev->message_head == NULL || dev->message_head->data == NULL)
+            continue;
+        return (const char *)dev->message_head->data;
+    }
+    return NULL;
+}
+long queue_ioctl(struct file *filp, unsigned int cmd, char *arg)
+{
+    int retval = -1;
+    struct queue_dev *dev = filp->private_data;
+    size_t minor = MINOR(dev->cdev.dev);
+    if(minor != 0)
+        return -EINVAL;
+
+    printk("Above Switch\n");
+    
+    switch(cmd) 
+    {
+        case QUEUE_POP:
+            printk("POPPPPPPPPPPP Switch\n");
+            strcpy(arg,pop_first_message());
+            return 0;
+        break;
+        default:
+            printk("default Switch\n");
+            return -EINVAL;
+        break;
+    }
+    return retval;
 }
 
 struct file_operations queue_fops = {

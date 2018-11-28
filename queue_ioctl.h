@@ -1,0 +1,7 @@
+#ifndef QUEUE_IOCTL_H
+#define QUEUE_IOCTL_H
+
+#define QUEUE_IOCTL_MAGIC_NUMBER 'R'
+#define QUEUE_POP _IO(QUEUE_IOCTL_MAGIC_NUMBER,	0)
+
+#endif

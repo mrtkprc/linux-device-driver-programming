@@ -670,6 +670,7 @@ deps_/home/mert/Desktop/SystemProject2/pri_que.o := \
   arch/x86/include/asm/smap.h \
     $(wildcard include/config/x86/smap.h) \
   arch/x86/include/asm/uaccess_32.h \
+  /home/mert/Desktop/SystemProject2/queue_ioctl.h \
 
 /home/mert/Desktop/SystemProject2/pri_que.o: $(deps_/home/mert/Desktop/SystemProject2/pri_que.o)
 
